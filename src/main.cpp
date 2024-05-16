@@ -16,17 +16,23 @@ int BandAmount = 6;
 long CurrRes = 0;
 int picVal = 0;
 String picBandCurr;
+boolean GSflag = false;
 
 int getColorIndex(long color, long ColorArray[]);
 uint32_t getCurrentRes();
 String getTolerance();
 String get_tolerance(int code);
 String get_temperature_coefficient(int code);
+String getTempCoeff();
 long MultiplyPower10(int code);
 
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
+    Serial.print("page Startup");
+    Serial.print(char(255));
+    Serial.print(char(255));
+    Serial.print(char(255));
 }
 
 void loop(void) {
@@ -45,12 +51,14 @@ void trigger0(){  // Color Shift Up
     if((((BandAmount == 6) || (BandAmount == 5)) && ((chooseBand == 3) || (chooseBand == 4))) || ((BandAmount == 4) && ((chooseBand == 2) || (chooseBand == 3)))){
         picBandCurr = picBand[chooseBand - 2];
         picVal = myNex.readNumber(picBandCurr);
-        if(getColorIndex(clrVal, Colors) == 9){
+        if((getColorIndex(clrVal, Colors) == 9) || GSflag){
             if(picVal !=2){
                 myNex.writeNum(picBandCurr, picVal+1);
+                GSflag = true;
             }else{
                 myNex.writeNum(picBandCurr, 0);
-                clrVal = Colors[(getColorIndex(clrVal, Colors) + 1)%10]; 
+                clrVal = Colors[0];
+                GSflag = false; 
             }
         }else{
             clrVal = Colors[(getColorIndex(clrVal, Colors) + 1)%10];
@@ -61,6 +69,7 @@ void trigger0(){  // Color Shift Up
     myNex.writeNum(selectBand[chooseBand], clrVal);
     myNex.writeNum("resCalc.val", getCurrentRes());
     myNex.writeStr("t1.txt", getTolerance());
+    myNex.writeStr("t4.txt", getTempCoeff());
 }
 
 void trigger1(){  // Color Shift Down
@@ -69,12 +78,14 @@ void trigger1(){  // Color Shift Down
     if((((BandAmount == 6) || (BandAmount == 5)) && ((chooseBand == 3) || (chooseBand == 4))) || ((BandAmount == 4) && ((chooseBand == 2) || (chooseBand == 3)))){
         picBandCurr = picBand[chooseBand - 2];
         picVal = myNex.readNumber(picBandCurr);
-        if(getColorIndex(clrVal, Colors) == 0){
+        if((getColorIndex(clrVal, Colors) == 0) || GSflag){
             if(picVal !=1){
                 myNex.writeNum(picBandCurr, (picVal+2)%3);
+                GSflag = true;
             }else{
                 myNex.writeNum(picBandCurr, 0);
-                clrVal = Colors[(getColorIndex(clrVal, Colors) + 9)%10]; 
+                clrVal = Colors[9]; 
+                GSflag = false;
             }
         }else{
             clrVal = Colors[(getColorIndex(clrVal, Colors) + 9)%10];
@@ -85,15 +96,16 @@ void trigger1(){  // Color Shift Down
     myNex.writeNum(selectBand[chooseBand], clrVal);
     myNex.writeNum("resCalc.val", getCurrentRes());
     myNex.writeStr("t1.txt", getTolerance());
+    myNex.writeStr("t4.txt", getTempCoeff());    
 }
 
-void trigger2(){  // Increase Bands Amount
+void trigger2(){  // Next Band
   BandAmount = myNex.readNumber("bandNumber.val");
   chooseBand = (chooseBand + 1)%BandAmount;
   myNex.writeNum("CurrBand.val", chooseBand+1);
 }
 
-void trigger3(){  // Decrease Bands Amount
+void trigger3(){  // Previous Band
   BandAmount = myNex.readNumber("bandNumber.val");
   chooseBand = (chooseBand + BandAmount - 1)%BandAmount;
   myNex.writeNum("CurrBand.val", chooseBand+1);
@@ -101,6 +113,19 @@ void trigger3(){  // Decrease Bands Amount
 
 void trigger4(){  // Reset Bands
   chooseBand = 0;
+}
+
+void trigger5(){
+    myNex.writeStr("page choice");
+}
+
+void trigger6(){
+    myNex.writeStr("page SixBands");
+    trigger4();
+}
+
+void trigger7(){
+    myNex.writeStr("page measurement");
 }
 
 int getColorIndex(long color, long ColorArray[10]){
@@ -168,11 +193,34 @@ String get_tolerance(int code) {
 }
 
 String getTolerance(){
+    int gscheck;
     BandAmount = myNex.readNumber("bandNumber.val");
     if(BandAmount == 4){
+        gscheck = myNex.readNumber("picValB4.val");
+        if(gscheck == 1){
+            return "+-5%";
+        }else if (gscheck == 2){
+           return "+-10%";
+        }
         return get_tolerance(getColorIndex(myNex.readNumber("va3.val"), Colors));
     }
     else{
+        gscheck = myNex.readNumber("picValB5.val");
+        if(gscheck == 1){
+            return "+-5%";
+        }else if (gscheck == 2){
+           return "+-10%";
+        }
         return get_tolerance(getColorIndex(myNex.readNumber("va4.val"), Colors));
+    }
+}
+
+String getTempCoeff(){
+    BandAmount = myNex.readNumber("bandNumber.val");
+    if(BandAmount == 6){
+        return get_temperature_coefficient(getColorIndex(myNex.readNumber("va5.val"), Colors));
+    }
+    else{
+        return "unknown";
     }
 }
