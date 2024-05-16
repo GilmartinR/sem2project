@@ -29,7 +29,7 @@ long MultiplyPower10(int code);
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
-    Serial.print("page Startup");
+    Serial.print("page Title");
     Serial.print(char(255));
     Serial.print(char(255));
     Serial.print(char(255));
