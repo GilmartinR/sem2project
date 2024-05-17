@@ -7,6 +7,8 @@
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 EasyNex myNex(Serial);
 
+//Variables
+
 long clrVal = 0;
 int chooseBand = 0;
 const char* selectBand[6] = {"va0.val", "va1.val", "va2.val", "va3.val", "va4.val", "va5.val"};
@@ -18,6 +20,8 @@ int picVal = 0;
 String picBandCurr;
 boolean GSflag = false;
 
+// Function prototypes
+
 int getColorIndex(long color, long ColorArray[]);
 uint32_t getCurrentRes();
 String getTolerance();
@@ -25,14 +29,17 @@ String get_tolerance(int code);
 String get_temperature_coefficient(int code);
 String getTempCoeff();
 long MultiplyPower10(int code);
+void nexCommand(String s);
 
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
-    Serial.print("page Title");
-    Serial.print(char(255));
-    Serial.print(char(255));
-    Serial.print(char(255));
+    nexCommand("page Startup");
+    for(int i = 0; i < 100; i++){
+        myNex.writeNum("j0.val", i);
+        _delay_ms(20);
+    }
+    nexCommand("page title");
 }
 
 void loop(void) {
@@ -223,4 +230,11 @@ String getTempCoeff(){
     else{
         return "unknown";
     }
+}
+
+void nexCommand(String s){
+    Serial.print(s);
+    Serial.print(char(255));
+    Serial.print(char(255));
+    Serial.print(char(255));
 }
