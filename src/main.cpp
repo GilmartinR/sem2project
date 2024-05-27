@@ -4,17 +4,16 @@
 #include <string.h>
 #include <math.h>
 #include <PushButton.h>
-#include <vector.h>
 
 //Definitions
 
 #define BUTTON_PIN_RIGHT 4
-#define BUTTON_PIN_LEFT 6
+#define BUTTON_PIN_OK 6
 
 //Objects
 
 Pushbutton R_Button(BUTTON_PIN_RIGHT);
-Pushbutton L_Button(BUTTON_PIN_LEFT);
+Pushbutton OK_Button(BUTTON_PIN_OK);
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 EasyNex myNex(Serial);
 
@@ -30,6 +29,7 @@ long CurrRes = 0;
 int picVal = 0;
 String picBandCurr;
 boolean GSflag = false;
+int current_button_id = 0;
 
 // Function prototypes
 
@@ -45,6 +45,11 @@ void nexCommand(String s);
 void trigger2();
 void trigger3();
 
+void right_btn_press();
+void set_first_button();
+
+//--------------------------------------------------------------------------
+
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
@@ -59,11 +64,11 @@ void setup(void) {
 void loop(void) {
     myNex.NextionListen();
     if(R_Button.getSingleDebouncedPress()){
-        trigger2();
+        right_btn_press();
     }
-    if(L_Button.getSingleDebouncedPress()){
-        trigger3();
-    }
+    // if(OK_Button.getSingleDebouncedPress()){
+    //     trigger3();
+    // }
 }
 
 void trigger0(){  // Color Shift Up
@@ -134,15 +139,18 @@ void trigger3(){  // Previous Band
 
 void trigger4(){  // Reset Bands while decreasing Band amount
   chooseBand = 0;
+    set_first_button();
 }
 
 void trigger5(){  // ...I'm not sure?
     myNex.writeStr("page choice");
+    set_first_button();
 }
 
 void trigger6(){    // ...I'm not sure?
     myNex.writeStr("page SixBands");
     trigger4();
+
 }
 
 void trigger7(){    // ...I'm not sure?
@@ -251,4 +259,24 @@ void nexCommand(String s){  // Sending commands to nextion, without having to bu
     Serial.print(char(255));
     Serial.print(char(255));
     Serial.print(char(255));
+}
+
+void right_btn_press(){
+    int buttons_on_page = myNex.readNumber("buttonsAmount.val");
+    
+    if(buttons_on_page){
+        String helpLine = String("bt" + String(current_button_id) + ".bco");
+        myNex.writeNum(helpLine, 54970);
+        current_button_id = (current_button_id + 1)%buttons_on_page;
+        helpLine =String("bt" + String(current_button_id) + ".bco");
+        myNex.writeNum(helpLine, 48631);
+    }
+}
+
+void set_first_button(){
+    int buttons_on_page = myNex.readNumber("buttonsAmount.val");
+    if(buttons_on_page){
+        current_button_id = 0;
+        myNex.writeNum("bt0.bco",48631);
+    }
 }
