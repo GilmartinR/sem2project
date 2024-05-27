@@ -3,7 +3,18 @@
 #include "EasyNextionLibrary.h"
 #include <string.h>
 #include <math.h>
+#include <PushButton.h>
+#include <vector.h>
 
+//Definitions
+
+#define BUTTON_PIN_RIGHT 4
+#define BUTTON_PIN_LEFT 6
+
+//Objects
+
+Pushbutton R_Button(BUTTON_PIN_RIGHT);
+Pushbutton L_Button(BUTTON_PIN_LEFT);
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 EasyNex myNex(Serial);
 
@@ -31,6 +42,9 @@ String getTempCoeff();
 long MultiplyPower10(int code);
 void nexCommand(String s);
 
+void trigger2();
+void trigger3();
+
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
@@ -44,12 +58,12 @@ void setup(void) {
 
 void loop(void) {
     myNex.NextionListen();
-    // float r1, g1 ,b1;
-    // tcs.getRGB(&r1, &g1, &b1);
-    // Serial.print("R: "); Serial.print(r1, DEC); Serial.print(" ");
-    // Serial.print("G: "); Serial.print(g1, DEC); Serial.print(" ");
-    // Serial.print("B: "); Serial.print(b1, DEC); Serial.print(" ");
-    // Serial.println(" ");
+    if(R_Button.getSingleDebouncedPress()){
+        trigger2();
+    }
+    if(L_Button.getSingleDebouncedPress()){
+        trigger3();
+    }
 }
 
 void trigger0(){  // Color Shift Up
@@ -118,24 +132,24 @@ void trigger3(){  // Previous Band
   myNex.writeNum("CurrBand.val", chooseBand+1);
 }
 
-void trigger4(){  // Reset Bands
+void trigger4(){  // Reset Bands while decreasing Band amount
   chooseBand = 0;
 }
 
-void trigger5(){
+void trigger5(){  // ...I'm not sure?
     myNex.writeStr("page choice");
 }
 
-void trigger6(){
+void trigger6(){    // ...I'm not sure?
     myNex.writeStr("page SixBands");
     trigger4();
 }
 
-void trigger7(){
+void trigger7(){    // ...I'm not sure?
     myNex.writeStr("page measurement");
 }
 
-int getColorIndex(long color, long ColorArray[10]){
+int getColorIndex(long color, long ColorArray[10]){  // Easy scan of Color array to get number from color
     for(int i = 0; i < 10; i++){
         if(ColorArray[i] == color){
             return i;
@@ -144,7 +158,7 @@ int getColorIndex(long color, long ColorArray[10]){
     return 0;
 }
 
-uint32_t getCurrentRes(){
+uint32_t getCurrentRes(){  // Resistance calculations, doesn't account for gold/silver in multiplication
     BandAmount = myNex.readNumber("bandNumber.val");
     if(BandAmount == 4){
         return (getColorIndex(myNex.readNumber("va0.val"), Colors)*10 + getColorIndex(myNex.readNumber("va1.val"), Colors)) * MultiplyPower10(getColorIndex(myNex.readNumber("va2.val"), Colors));
@@ -199,7 +213,7 @@ String get_tolerance(int code) {
     }
 }
 
-String getTolerance(){
+String getTolerance(){  // Final function for tolerance calculation
     int gscheck;
     BandAmount = myNex.readNumber("bandNumber.val");
     if(BandAmount == 4){
@@ -222,7 +236,7 @@ String getTolerance(){
     }
 }
 
-String getTempCoeff(){
+String getTempCoeff(){  // Final function for TempCoeff calculation
     BandAmount = myNex.readNumber("bandNumber.val");
     if(BandAmount == 6){
         return get_temperature_coefficient(getColorIndex(myNex.readNumber("va5.val"), Colors));
@@ -232,7 +246,7 @@ String getTempCoeff(){
     }
 }
 
-void nexCommand(String s){
+void nexCommand(String s){  // Sending commands to nextion, without having to bulk program
     Serial.print(s);
     Serial.print(char(255));
     Serial.print(char(255));
