@@ -9,11 +9,13 @@
 
 #define BUTTON_PIN_RIGHT 4
 #define BUTTON_PIN_OK 6
+#define BUTTON_PIN_LEFT 2
 
 //Objects
 
 Pushbutton R_Button(BUTTON_PIN_RIGHT);
 Pushbutton OK_Button(BUTTON_PIN_OK);
+Pushbutton L_Button(BUTTON_PIN_LEFT);
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 EasyNex myNex(Serial);
 
@@ -46,7 +48,9 @@ void trigger2();
 void trigger3();
 
 void right_btn_press();
+void left_btn_press();
 void set_first_button();
+void ok_button();
 
 //--------------------------------------------------------------------------
 
@@ -59,6 +63,7 @@ void setup(void) {
         _delay_ms(20);
     }
     nexCommand("page title");
+    set_first_button();
 }
 
 void loop(void) {
@@ -66,9 +71,9 @@ void loop(void) {
     if(R_Button.getSingleDebouncedPress()){
         right_btn_press();
     }
-    // if(OK_Button.getSingleDebouncedPress()){
-    //     trigger3();
-    // }
+    if(OK_Button.getSingleDebouncedPress()){
+        ok_button();
+    }
 }
 
 void trigger0(){  // Color Shift Up
@@ -273,10 +278,30 @@ void right_btn_press(){
     }
 }
 
+void left_btn_press(){
+    int buttons_on_page = myNex.readNumber("buttonsAmount.val");
+    
+    if(buttons_on_page){
+        String helpLine = String("bt" + String(current_button_id) + ".bco");
+        myNex.writeNum(helpLine, 54970);
+        current_button_id = (current_button_id + (buttons_on_page)-1)%buttons_on_page;
+        helpLine =String("bt" + String(current_button_id) + ".bco");
+        myNex.writeNum(helpLine, 48631);
+    }
+}
+
 void set_first_button(){
     int buttons_on_page = myNex.readNumber("buttonsAmount.val");
     if(buttons_on_page){
         current_button_id = 0;
         myNex.writeNum("bt0.bco",48631);
+    }
+}
+
+void ok_button(){
+    int buttons_on_page = myNex.readNumber("buttonsAmount.val");
+    if(buttons_on_page){
+        nexCommand(String("click bt"+String(current_button_id)+",1"));
+        nexCommand(String("click bt"+String(current_button_id)+",0"));
     }
 }
