@@ -5,18 +5,17 @@
 #include <math.h>
 #include <PushButton.h>
 
-//Definitions
+//Definitions (For button Pins)
 
 #define BUTTON_PIN_RIGHT 4
 #define BUTTON_PIN_OK 6
 #define BUTTON_PIN_LEFT 2
 
-//Objects
+//Objects from other libraries
 
 Pushbutton R_Button(BUTTON_PIN_RIGHT);
-Pushbutton OK_Button(BUTTON_PIN_OK);
+Pushbutton OK_button(BUTTON_PIN_OK);
 Pushbutton L_Button(BUTTON_PIN_LEFT);
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 EasyNex myNex(Serial);
 
 //Variables
@@ -50,13 +49,14 @@ void trigger3();
 void right_btn_press();
 void left_btn_press();
 void set_first_button();
-void ok_button();
+void OK_btn_press();
 
 //--------------------------------------------------------------------------
 
 void setup(void) {
     Serial.begin(9600);
     myNex.begin(9600);
+    while(!Serial){}  // Awaiting Serial (Screen, fake monitor) Connection
     nexCommand("page Startup");
     for(int i = 0; i < 100; i++){
         myNex.writeNum("j0.val", i);
@@ -71,12 +71,15 @@ void loop(void) {
     if(R_Button.getSingleDebouncedPress()){
         right_btn_press();
     }
-    if(OK_Button.getSingleDebouncedPress()){
-        ok_button();
+    if(OK_button.getSingleDebouncedPress()){
+        OK_btn_press();
+    }
+    if(L_Button.getSingleDebouncedPress()){
+        left_btn_press();
     }
 }
 
-void trigger0(){  // Color Shift Up
+void trigger0(){  // On Color->Resistor page, shift color of selected band up
     BandAmount = myNex.readNumber("bandNumber.val");
     clrVal = myNex.readNumber(selectBand[chooseBand]);
     if((((BandAmount == 6) || (BandAmount == 5)) && ((chooseBand == 3) || (chooseBand == 4))) || ((BandAmount == 4) && ((chooseBand == 2) || (chooseBand == 3)))){
@@ -103,7 +106,7 @@ void trigger0(){  // Color Shift Up
     myNex.writeStr("t4.txt", getTempCoeff());
 }
 
-void trigger1(){  // Color Shift Down
+void trigger1(){  // On Color->Resistor page, shift color of selected band down
     BandAmount = myNex.readNumber("bandNumber.val");
     clrVal = myNex.readNumber(selectBand[chooseBand]);
     if((((BandAmount == 6) || (BandAmount == 5)) && ((chooseBand == 3) || (chooseBand == 4))) || ((BandAmount == 4) && ((chooseBand == 2) || (chooseBand == 3)))){
@@ -130,36 +133,21 @@ void trigger1(){  // Color Shift Down
     myNex.writeStr("t4.txt", getTempCoeff());    
 }
 
-void trigger2(){  // Next Band
+void trigger2(){  // On Color->Resistor page, select next band
   BandAmount = myNex.readNumber("bandNumber.val");
   chooseBand = (chooseBand + 1)%BandAmount;
   myNex.writeNum("CurrBand.val", chooseBand+1);
 }
 
-void trigger3(){  // Previous Band
+void trigger3(){  // On Color->Resistor page, select previous band
   BandAmount = myNex.readNumber("bandNumber.val");
   chooseBand = (chooseBand + BandAmount - 1)%BandAmount;
   myNex.writeNum("CurrBand.val", chooseBand+1);
 }
 
-void trigger4(){  // Reset Bands while decreasing Band amount
-  chooseBand = 0;
+void trigger4(){  // Triggered when switching pages - set current band to the first one, sets first button as selected
+    chooseBand = 0;
     set_first_button();
-}
-
-void trigger5(){  // ...I'm not sure?
-    myNex.writeStr("page choice");
-    set_first_button();
-}
-
-void trigger6(){    // ...I'm not sure?
-    myNex.writeStr("page SixBands");
-    trigger4();
-
-}
-
-void trigger7(){    // ...I'm not sure?
-    myNex.writeStr("page measurement");
 }
 
 int getColorIndex(long color, long ColorArray[10]){  // Easy scan of Color array to get number from color
@@ -181,7 +169,7 @@ uint32_t getCurrentRes(){  // Resistance calculations, doesn't account for gold/
     }
 }
 
-String get_temperature_coefficient(int code) {
+String get_temperature_coefficient(int code) {  // Helper functon for temperature coefficients
     switch(code) {
         case 0: return "250 ppm/K";
         case 1: return "100 ppm/K";
@@ -196,7 +184,7 @@ String get_temperature_coefficient(int code) {
     }
 }
 
-long MultiplyPower10(int code){
+long MultiplyPower10(int code){  // Helper function for multiplications
     switch(code) {
         case 0: return 1;
         case 1: return 10;
@@ -212,7 +200,7 @@ long MultiplyPower10(int code){
     }
 }
 
-String get_tolerance(int code) {
+String get_tolerance(int code) {  // Helper function for tolerances
     switch(code) {
         case 1: return "+-1%";
         case 2: return "+-2%";
@@ -266,39 +254,34 @@ void nexCommand(String s){  // Sending commands to nextion, without having to bu
     Serial.print(char(255));
 }
 
-void right_btn_press(){
+void right_btn_press(){  // Press Right arrow button -> Move to button that is to the right/next row
     int buttons_on_page = myNex.readNumber("buttonsAmount.val");
     
     if(buttons_on_page){
-        String helpLine = String("bt" + String(current_button_id) + ".bco");
-        myNex.writeNum(helpLine, 54970);
+        myNex.writeNum(String("bt" + String(current_button_id) + ".bco"), 54970);
         current_button_id = (current_button_id + 1)%buttons_on_page;
-        helpLine =String("bt" + String(current_button_id) + ".bco");
-        myNex.writeNum(helpLine, 48631);
+        myNex.writeNum(String("bt" + String(current_button_id) + ".bco"), 35953);
     }
 }
 
-void left_btn_press(){
+void left_btn_press(){  // Press Left arrow button -> Move to button that is to the left/previous row
     int buttons_on_page = myNex.readNumber("buttonsAmount.val");
-    
     if(buttons_on_page){
-        String helpLine = String("bt" + String(current_button_id) + ".bco");
-        myNex.writeNum(helpLine, 54970);
-        current_button_id = (current_button_id + (buttons_on_page)-1)%buttons_on_page;
-        helpLine =String("bt" + String(current_button_id) + ".bco");
-        myNex.writeNum(helpLine, 48631);
+        myNex.writeNum(String("bt" + String(current_button_id) + ".bco"), 54970);
+        current_button_id = (current_button_id + (buttons_on_page) - 1)%buttons_on_page;
+        myNex.writeNum(String("bt" + String(current_button_id) + ".bco"), 35953);
     }
 }
 
-void set_first_button(){
+void set_first_button(){  // Set the first button as active/selected when switching pages
     int buttons_on_page = myNex.readNumber("buttonsAmount.val");
     if(buttons_on_page){
         current_button_id = 0;
-        myNex.writeNum("bt0.bco",48631);
+        myNex.writeNum("bt0.bco",35953);
     }
 }
 
-void ok_button(){
+void OK_btn_press(){  // Press OK Button -> Trigger Press/Release events of current buttons
     int buttons_on_page = myNex.readNumber("buttonsAmount.val");
     if(buttons_on_page){
         nexCommand(String("click bt"+String(current_button_id)+",1"));
