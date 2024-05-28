@@ -31,6 +31,7 @@ int picVal = 0;
 String picBandCurr;
 boolean GSflag = false;
 int current_button_id = 0;
+long lastMeasuredResistance_test1 = 56000;
 
 // Function prototypes
 
@@ -42,6 +43,9 @@ String get_temperature_coefficient(int code);
 String getTempCoeff();
 long MultiplyPower10(int code);
 void nexCommand(String s);
+void calculate4BandColors(long resistance);
+void calculate5BandColors(long resistance);
+
 
 void trigger2();
 void trigger3();
@@ -64,6 +68,8 @@ void setup(void) {
     }
     nexCommand("page title");
     set_first_button();
+    
+    myNex.writeNum("R2C_FandSBands.lastMeasured.val", lastMeasuredResistance_test1);
 }
 
 void loop(void) {
@@ -148,6 +154,16 @@ void trigger3(){  // On Color->Resistor page, select previous band
 void trigger4(){  // Triggered when switching pages - set current band to the first one, sets first button as selected
     chooseBand = 0;
     set_first_button();
+}
+
+void trigger5(){
+    BandAmount = myNex.readNumber("bandNumber.val");
+    myNex.writeNum("convFlag.val", 1);
+    if(BandAmount == 4){
+        calculate4BandColors(lastMeasuredResistance_test1);
+    }else{
+        calculate5BandColors(lastMeasuredResistance_test1);
+    }
 }
 
 int getColorIndex(long color, long ColorArray[10]){  // Easy scan of Color array to get number from color
@@ -287,4 +303,34 @@ void OK_btn_press(){  // Press OK Button -> Trigger Press/Release events of curr
         nexCommand(String("click bt"+String(current_button_id)+",1"));
         nexCommand(String("click bt"+String(current_button_id)+",0"));
     }
+}
+
+void calculate4BandColors(long resistance) {  // Final Function for Resistance->Color with 4 Bands
+    myNex.writeNum("lastMeasured.val", resistance);
+    int multiplier = 0;    
+    while (resistance >= 100) {
+        resistance /= 10;
+        multiplier++;
+    }
+    myNex.writeNum("va2.val", Colors[multiplier]);
+    int digit1 = resistance / 10 % 10;
+    myNex.writeNum("va0.val", Colors[digit1]);
+    int digit2 = resistance % 10;
+    myNex.writeNum("va1.val", Colors[digit2]);
+}
+
+void calculate5BandColors(long resistance) {  // Final Function for Resistance->Color with 5 or 6 Bands
+    myNex.writeNum("lastMeasured.val", resistance);
+    int multiplier = 0;    
+    while (resistance >= 1000) {
+        resistance /= 10;
+        multiplier++;
+    }
+    myNex.writeNum("va3.val", Colors[multiplier]);
+    int digit1 = resistance / 100 % 10;
+    myNex.writeNum("va0.val", Colors[digit1]);
+    int digit2 = resistance / 10 % 10;
+    myNex.writeNum("va1.val", Colors[digit2]);
+    int digit3 = resistance % 10;
+    myNex.writeNum("va2.val", Colors[digit3]);
 }
